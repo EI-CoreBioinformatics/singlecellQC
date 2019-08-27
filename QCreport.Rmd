@@ -1,0 +1,212 @@
+---
+title: "SmartSeq2 QC report"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE)
+library(tidyverse)
+library(knitr)
+library(rlang)
+library(ggplot2)
+```
+
+```{r preprocessing}
+# pass .Rdata with: Rscript -e "objects=Rdata; rmarkdown::render('test.rmd')"
+
+if(!exists("objects")) stop("<--- scater files not passed to .Rmd! --->")
+
+load(objects)
+
+# concatenating outlier names to a single string
+out3 <- triple_outliers %>% paste(.,collapse = ", ")
+out2 <- double_outliers %>% paste(.,collapse = ", ")
+out1 <- single_outliers %>% paste(.,collapse = ", ")
+
+if(nchar(out3)<2) out3 <- "None"
+if(nchar(out2)<2) out2 <- "None"
+if(nchar(out1)<2) out1 <- "None"
+
+
+# 
+colnames(mapping_file) <- c("full_name","percentage")
+mean_mapping <- mapping_file[1,]
+mapping_file <- mapping_file[2:nrow(mapping_file),]
+sample_names <- rownames(per_cell_table)
+mapping_file <- sample_names %>%
+  sapply(function(id) grep(id, mapping_file[[1]])) %>%
+  unlist %>% mapping_file[.,]
+mapping_file$sample <- sample_names
+mapping_file$is_cell_control <- per_cell_table$is_cell_control
+
+mapping_file$is_cell_control <- mapping_file$is_cell_control %>% ifelse("Control samples", "All other samples")
+
+plot_map_percent <- ggplot(mapping_file, aes(x=percentage)) + geom_histogram(binwidth = 1, color="darkgreen", fill="lightblue") +
+  facet_wrap( ~ is_cell_control, ncol=1) +
+  theme_bw() +
+  labs(title = paste0("Average read mapping rate of ",mean_mapping[2],"%"))
+  
+```
+
+
+# SmartSeq2 QC report
+
+The data in this document is generated for plate `r plate_id` in experiment `r experiment_id`.
+
+Additional information can be found in the same folder as this report:
+
+* QC metrics and outlier information per sample
+* ERCC counts for each of the ERCCs per sample
+* alignment percentages per sample
+* plots used in this document
+
+
+## Cumulative distribution of expression
+
+The following plot shows, for the genes with the highest expression levels for the sample, proportion of the sample's library (y-axis) covered by which number of those genes (x-axis).
+
+Distributions which rise high quickly are samples which are dominated by low number of genes.
+This could be indicative of empty wells or damaged cells.
+
+```{r}
+plot(plot_cumulative_dist)
+```
+
+\newpage
+
+## Most highly expressed genes
+
+Shown are top genes by the proportion of counts they take in all samples.
+Feature names (as Ensembl transcripts or annotated control features) denote samples on the y-axis with the percentage of counts they capture on the x-axis. Circle shows the proportion across all samples with proportion for each of samples shown on the same line.
+
+If applicable, spike-ins (ERCC) and mitochondrial genes are labelled. Their high percentages are indicative of poor samples.
+
+```{r}
+plot(plot_highest_expression)
+```
+
+\newpage
+
+## Expression frequency - mean distribution of genes
+
+For all of the genes (features), their frequecny of expression (percentage of samples expressing the specific gene) is shown against their mean value of expression
+
+The relationship between the two variables is typically sigmoidal looking.
+
+
+```{r}
+plot(plot_expr_vs_mean)
+```
+
+\newpage
+
+## Scatterplots
+
+Following scatterplots show, for all of the samples and their total counts, their gene number, proportion of control genes (mitochondrial and ERCC) and proportion of mitochondrial gene. 
+
+```{r}
+plot(plot_featurenum_vs_counts)
+```
+
+```{r}
+plot(plot_fctrl_scatter)
+```
+
+```{r, echo=FALSE}
+plot(plot_mito_scatter)
+
+```
+
+\newpage
+
+## Plate position plots
+
+For each of the samples, their position on the plate and the corresponding metric (counts, percentage of mitochondrial counts, percentage of ERCC/spike-in counts) are shown.
+
+```{r}
+plot(plot_plate_counts)
+```
+
+\newpage
+
+```{r}
+plot(plot_plate_mito)
+```
+
+
+
+```{r}
+plot(plot_plate_ercc)
+```
+
+\newpage
+
+## Read mapping
+
+Reads were mapped with the kallisto pseudo-aligner to the reference genome with added ERCC mix.
+
+Percentage of reads that map is shown for all the samples, with the ones labelled as control separated.
+
+```{r}
+plot(plot_map_percent)
+```
+
+\newpage
+
+## Dimensionality reductions
+
+Dimensionality reductions summarise the large feature space with a smaller number of dimensions aiming to capture most of the variance in the data.
+
+Principal components and t-SNE dimensions are derived from the expression profiles of all the genes and visualised in the following scatterplots.
+
+Samples generally similar to each other will be closer.
+
+### PCA
+
+```{r pca}
+plot(plot_pca)
+```
+
+\newpage
+
+### t-SNE
+
+```{r tsne}
+plot(plot_tsne)
+```
+
+## Outliers and key metrics per sample
+
+Accompanying spreadsheet (`Per_sample_key_metrics.tsv`) contains the value for some of the most important metrics, position on the plate, control information and whether or not the sample is considered outlier in the population when it comes to number of counts, different features (genes) and percentage of counts which are mitochondrial or spike-in.
+
+If a sample is top or bottom 10%, it is considered as an outlier.
+
+Being an outlier on one metric is unlikely to be of much concern, but if the same sample is an outlier across all 3 it could be a sign of an unviable sample.
+
+Following samples have been marked as **outliers**.
+
+On all 3 outlier metrics:
+
+`r out3`
+
+For 2 outlier metrics:
+
+`r out2`
+
+\newpage
+
+Exact information for the metrics used in the generation of this document can be found in the accompanying table - `Per_sample_key_metrics.tsv`
+
+By default, it contains the following information: 
+
+* Plate position
+* Outlier status for the number of counts, features and proportion of mitochondrial/spike-in counts
+* Outlier hits - the number of times that sample has been labeled as an outlier
+* Total counts
+* Total features (genes)
+* Percentage of counts belonging to mitochondrial genes
+* Percentage of counts belonging to spike-ins
+* Percentage of counts covered by top 100 features
+
+
+
