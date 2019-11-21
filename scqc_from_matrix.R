@@ -50,6 +50,10 @@ scqc_from_tsv <- function(tsv_location, output_location="./", plate_info=2,
     
     # cell_type and cell_phenotype probably best not too always excpect?
   }
+  #print(plate_id)
+  if(length(plate_id)>1){
+    plate_id <- "all"
+  }
   
   #feature and cell controls
   inds_ercc <- counts_df %>% rownames() %>% grep("^ERCC",.)
@@ -80,46 +84,52 @@ scqc_from_tsv <- function(tsv_location, output_location="./", plate_info=2,
   rm(counts_df)
   setwd(output_location)
   
+
   
   
   #total count across genes
   plot_highest_expression <- plotHighestExprs(sce, exprs_values = "counts")
   #mean expression vs frequncy expressed
-  plot_expr_vs_mean <-  plotExprsFreqVsMean(sce, exprs_values = "counts")
+  plot_expr_vs_mean <-  plotExprsFreqVsMean(sce, exprs_values = "counts", show_smooth = F)
   #cumulative distribution plot
+  
+  cellctrl_flag <- NULL
+  if(length(inds_cellctrl)>0){
+    cellctrl_flag <- "is_cell_control"
+    }
+  
   plot_cumulative_dist <- plotScater(sce, nfeatures = 300, exprs_values = "counts",
-                                     colour_by = ifelse(length(inds_cellctrl),"is_cell_control", NULL))  
+                                     colour_by = cellctrl_flag)  
 
   #%MT - 
   plot_mito_scatter <- plotColData(sce, x = "total_features_by_counts",
               y = "pct_counts_mitochondrial",
-              colour_by = ifelse(length(inds_cellctrl),"is_cell_control", NULL)) +
+              colour_by = cellctrl_flag) +
     theme(legend.position = "top") + xlab("total_features") +
-    stat_smooth(method = "lm", se = FALSE, size = 2, fullrange = TRUE)
+    labs(title="Mitochondrial expression percentage ~ total features")
   #%ERCC
   plot_ercc_scatter <- plotColData(sce, x = "total_features_by_counts",
               y = "pct_counts_ERCC",
-              colour_by = ifelse(length(inds_cellctrl),"is_cell_control", NULL)) +
+              colour_by = cellctrl_flag) +
     theme(legend.position = "top") + xlab("total_features") +
-    stat_smooth(method = "lm", se = FALSE, size = 2, fullrange = TRUE)
+    labs(title="Spike-in expression percentage ~ total features")
   #counts across cells
   #% any feature control
   plot_fctrl_scatter <- plotColData(sce, x = "total_features_by_counts",
               y = "pct_counts_feature_control",
-              colour_by = ifelse(length(inds_cellctrl),"is_cell_control", NULL)) +
+              colour_by = cellctrl_flag) +
     xlab("total_features") +
-    stat_smooth(method = "lm", se = FALSE, size = 1.5, fullrange = TRUE) +
+    #stat_smooth(method = "lm", se = FALSE, size = 1.5, fullrange = TRUE) +
     ggtitle(paste("Out of", sce@assays$data$counts %>% nrow, "transcripts"))
   
   #counts ~ total
-  plot_featurenum_vs_counts <- plotColData(sce, x = "total_counts",
+  plot_featurenum_vs_counts <- plotColData(sce, x = "log10_total_counts",
               y = "total_features_by_counts",
-              colour_by = ifelse(length(inds_cellctrl),"is_cell_control", NULL)) +
-    theme(legend.position = "top") + xlab("total_counts") + ylab("total_features") +
-    stat_smooth(method = "lm", se = FALSE, size = 2, fullrange = TRUE)
+               colour_by = cellctrl_flag) +
+    theme(legend.position = "top") + xlab("log_total_counts") + ylab("total_features") +
+    labs(title="Total features ~ total counts (log scale)")
   
-  
-  pdf("QC_scatterplots.pdf", pointsize = 12)
+  pdf(paste0("QC_scatterplots_",plate_id,".pdf"), pointsize = 12)
   plot_featurenum_vs_counts %>% plot
   plot_cumulative_dist %>% plot
   plot_expr_vs_mean %>% plot
@@ -132,8 +142,8 @@ scqc_from_tsv <- function(tsv_location, output_location="./", plate_info=2,
   
   
   #0 - 1st 2 GP test runs naming
-  #1 - Anite/Geoff naming
-  #2 - run 3 (standard?) GP naming
+  #1 - Anita/Geoff naming
+  #2 - run 3 (Jim's samplesheet) GP naming
   sce$Cell <- sce@assays$data$counts %>% colnames
   if(exists("well_id")) sce$plate_position <- well_id
   if(plate_info==0){
@@ -156,19 +166,19 @@ scqc_from_tsv <- function(tsv_location, output_location="./", plate_info=2,
   plot_plate_mito <- plotPlatePosition(sce,
                     colour_by = "pct_counts_mitochondrial",
                     by_exprs_values = "counts",
-                    point_size = 12) +
+                    point_size = 9) +
     guides(fill="colorbar") + theme(legend.position = "top")
   plot_plate_ercc <- plotPlatePosition(sce,
                                        colour_by = "pct_counts_ERCC",
                                        by_exprs_values = "counts",
-                                       point_size = 12) +
+                                       point_size = 9) +
     guides(fill="colorbar") + theme(legend.position = "top")
   plot_plate_counts <- plotPlatePosition(sce,
-                                         colour_by = "total_counts",
+                                         colour_by = "log10_total_counts",
                                          by_exprs_values = "counts",
-                                         point_size = 12) + guides(fill="colorbar")
+                                         point_size = 9) + guides(fill="colorbar")
   # counts per well
-  pdf("Plate_position_plots.pdf", pointsize = 12)
+  pdf(paste0("Plate_position_plots_",plate_id,".pdf"), pointsize = 12)
   plot(plot_plate_counts)
   plot(plot_plate_ercc)
   plot(plot_plate_mito)
@@ -184,8 +194,12 @@ scqc_from_tsv <- function(tsv_location, output_location="./", plate_info=2,
   
   ercc_table <- ercc_counts[,c(df_col, df_col-1, 1:(df_col-2))]
   
-  write.table(ercc_table, "Sample_counts_across_ERCCs.tsv",
+  write.table(ercc_table, paste0("Sample_counts_across_ERCCs_",plate_id,".tsv"),
               sep='\t', row.names = F)
+
+   # sce$cell_type <- sce %>% colData() %>% rownames %>%
+   #   match(samplesheet$unique_sample_id_suffix) %>%
+   #   samplesheet[.,] %>% `$`(cell_type)
 
   sce <- normalize(sce)
   sce <- runPCA(sce, ncomponents=20, detect_outliers=T)
@@ -199,7 +213,7 @@ scqc_from_tsv <- function(tsv_location, output_location="./", plate_info=2,
   
   plot_pca <- plotPCA(sce,
                       colour_by = "log10_total_counts",
-                      size_by = "log10_total_features_by_counts",
+                      size_by = "total_features_by_counts",
                       shape_by=control_shape) + control_scale
   
   plot_tsne <- plotTSNE(sce,
@@ -207,7 +221,12 @@ scqc_from_tsv <- function(tsv_location, output_location="./", plate_info=2,
            size_by = "total_features_by_counts",
            shape_by = control_shape) + control_scale
   
-  pdf("QC_dimReductions.pdf", pointsize=12)
+  # plot_tsne_type <- plotTSNE(sce,
+  #                       colour_by = "cell_type",
+  #                       size_by = "total_features_by_counts",
+  #                       shape_by = "cell_type")
+  
+  pdf(paste0("QC_dimReductions_",plate_id,".pdf"), pointsize=12)
   plot(plot_pca)
   plot(plot_tsne)
   dev.off()
@@ -237,9 +256,12 @@ scqc_from_tsv <- function(tsv_location, output_location="./", plate_info=2,
   per_cell_table <- as.data.frame(colData(sce)[, per_cell_metric])
   rownames(per_cell_table) <- rownames(per_cell_table) %>% 
     gsub("_[CATG]{8}-[CATG]{8}","",.)
-  write.table(per_cell_table, "Per_sample_key_metrics.tsv",
-              sep='\t', row.names = F)
   sample_names <- per_cell_table %>% rownames
+  per_cell_table$sample_ID <- sample_names
+  per_cell_table <- per_cell_table %>% select(sample_ID, everything())
+  write.table(per_cell_table, paste0("Per_sample_key_metrics_",plate_id,".tsv"),
+              sep='\t', row.names = F)
+  
   triple_outliers <- which(per_cell_table$outlier_hits==3) %>% sample_names[.]
   double_outliers <- which(per_cell_table$outlier_hits==2) %>% sample_names[.]
   single_outliers <- which(per_cell_table$outlier_hits==1) %>% sample_names[.]
@@ -251,7 +273,8 @@ scqc_from_tsv <- function(tsv_location, output_location="./", plate_info=2,
        per_cell_table, ercc_table, per_cell_metric,
        triple_outliers, double_outliers, single_outliers,
        plate_id, experiment_id,
-       file="qc_for_doc.Rdata")
+       sce,
+       file=paste0(plate_id,"qc_for_doc.Rdata"))
   
 }
 

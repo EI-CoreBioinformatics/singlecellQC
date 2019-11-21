@@ -1,1 +1,0 @@
-/hpc-home/uzun/Scripts/merge_kallisto_quant.R

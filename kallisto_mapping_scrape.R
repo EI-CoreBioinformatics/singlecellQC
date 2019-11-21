@@ -1,1 +1,0 @@
-/hpc-home/uzun/Scripts/kallisto_mapping_scrape.R

@@ -1,1 +1,0 @@
-/hpc-home/uzun/nf/scqc_nf_ag.sh
