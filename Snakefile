@@ -1,1 +1,0 @@
-/hpc-home/uzun/nf/Snakefile

@@ -14,6 +14,7 @@ tx2gene_counts <- function(counts_table_location, outloc, species="Hsapiens"){
   } else if(species=="Mmusculus"){
     mart_species <- "mmusculus_gene_ensembl"
   } else {
+    print(species)
     stop("<--- Invalid species string! --->")
   }
   
@@ -32,7 +33,7 @@ tx2gene_counts <- function(counts_table_location, outloc, species="Hsapiens"){
   gene_level_matrix <- aggregate(. ~ gene_name, c_matrix, sum)
   rownames(gene_level_matrix) <- gene_level_matrix$gene_name
   
-  write.table(gene_level_matrix[,-1], paste0(outloc,"all_plates_as_genelevel.tsv"), sep='\t')
+  write.table(gene_level_matrix[,-1], paste0(outloc,"plates_as_genelevel.tsv"), sep='\t')
 }
 
 
@@ -52,6 +53,7 @@ if(sys.nframe()==0){
     stop("<--- Missing arguments in tx2g call! --->")
   
   if(length(args)>=3){
+    print(paste0("Args: ", args[1], "---",args[1], "---",args[1]))
     species <- args[3]
     tx2gene_counts(args[1], args[2], species)
   } else {
