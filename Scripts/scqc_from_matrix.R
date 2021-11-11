@@ -34,7 +34,7 @@ scqc_from_tsv <- function(tsv_location, output_location="./", plate_info=2,
     # samplesheet column names assumed standardised
 
     row_ids <- sapply(samplesheet$unique_sample_id_suffix,
-           function(id) grepl(id, colnames(counts_df))) %>% apply(1,which)
+           function(id) grepl(paste0(id, "_"), colnames(counts_df))) %>% apply(1,which)
 
     # above will cause errors if some ids a subset of others (e.g. xyz1 and xyz12)
     # in which case the row_ids will be a list
