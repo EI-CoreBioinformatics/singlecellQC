@@ -75,9 +75,8 @@ Sample sheet will be unique for every run.
 
 It is a .csv file that has to have the following columns. Additional columns are not a problem, but are not used.
 
-* unique_sample_id_suffix -
-   Part of the FASTQ file name that uniquely matches to one sample. This is how the pipeline connects the raw data with sample sheet information.
-    well - Row/column location of the sample on the plate. Something like A01, A02, etc. These are needed for plate position plots.
+* unique_sample_id_suffix - Part of the FASTQ file name that uniquely matches to one sample. This is how the pipeline connects the raw data with sample sheet information.
+* well - Row/column location of the sample on the plate. Something like A01, A02, etc. These are needed for plate position plots.
 * plate_id - A string corresponding to one of the plates used in the experiment.
 * number_of_cells - Number of cells in a well.
 * control - TRUE if the well contains a control, FALSE otherwise.
