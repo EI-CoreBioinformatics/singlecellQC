@@ -2,13 +2,22 @@
 title: "SmartSeq2 quality control report"
 output: pdf_document
 ---
+  
+  ```{r setup0, include=FALSE}
+library(dplyr)
+```
 
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE)
-library(tidyverse)
+```{r setup1, include=FALSE}
 library(knitr)
-library(rlang)
+knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE)
+```
+
+```{r setup3, include=FALSE}
 library(ggplot2)
+```
+
+```{r tinytex_ver, include=FALSE}
+options(tinytex.verbose = TRUE)
 ```
 
 ```{r preprocessing}
@@ -17,16 +26,13 @@ library(ggplot2)
 if(!exists("objects")) stop("<--- scater files not passed to .Rmd! --->")
 
 load(objects)
-
+output_dir=dirname(objects)
 # concatenating outlier names to a single string
-out3 <- triple_outliers %>% paste(.,collapse = ", ")
 out2 <- double_outliers %>% paste(.,collapse = ", ")
 out1 <- single_outliers %>% paste(.,collapse = ", ")
 
-if(nchar(out3)<2) out3 <- "None"
 if(nchar(out2)<2) out2 <- "None"
 if(nchar(out1)<2) out1 <- "None"
-
 
 # 
 colnames(mapping_file) <- c("full_name","percentage")
@@ -38,43 +44,42 @@ mapping_file <- sample_names %>%
   unlist %>% mapping_file[.,]
 mapping_file$sample <- sample_names
 mapping_file$is_cell_control <- per_cell_table$is_cell_control
+is_cell_control <- ifelse(sum(mapping_file$is_cell_control)>0, T, F)
 
 mapping_file$is_cell_control <- mapping_file$is_cell_control %>% ifelse("Control samples", "Experiment samples")
-
 plot_map_percent <- ggplot(mapping_file, aes(x=percentage)) + geom_histogram(binwidth = 1, color="darkgreen", fill="lightblue") +
-  facet_wrap( ~ is_cell_control, ncol=1) +
   theme_bw() +
-  labs(title = paste0("Average read mapping rate of ",mean_mapping[2],"%"))
-  
+  labs(title = sprintf("Average read mapping rate of %.2f%%", mean_mapping[2]))
+if (is_cell_control) plot_map_percent <- plot_map_percent+facet_wrap( ~ is_cell_control, ncol=1)
+
 is_plate <- ifelse(plate_id=="all",F,T)
+plate_id <- paste0(as.character(unique(per_cell_table$plate_id)), collapse = ',')
+is_ercc=ifelse(nrow(ercc_table)==0, F, T)
+
 ```
 
-
-
-
-The data in this document is generated for plate `r plate_id` in experiment `r experiment_id`.
+The data in this document is generated for plate `r plate_id`.
 
 Additional information regarding quality control can be found in the same folder as this report:
-
-* QC metrics and outlier information per sample
-* ERCC counts for each of the ERCCs per sample
-* alignment percentages per sample
-* plots used in this document
+  
+  -   QC metrics and outlier information per sample
+-   alignment percentages per sample
+-   plots used in this document
 
 The kallisto quantifications for each of the samples and merged expression matrices (estimated counts by default) are in the neighbouring directory.
 
 Tools used in the quality control pipeline are:
-
- * kallisto 0.45.1
- * R-3.5.2
- * R markdown
- * R packages: scater, ggplot2, dplyr, knitr, rjson
- * nextflow 19.04.1
- * singularity 2.4.2
+  
+  -   kallisto 0.44.0
+-   R 4.1.2
+-   R markdown
+-   R packages: scater 1.22.0, ggplot2, dplyr, knitr, rjson
+-   nextflow 22.04.0
+-   singularity 3.8.7
 
 ## Read mapping
 
-Reads were mapped with the kallisto pseudo-aligner (version 0.45.1) to the reference genome with added ERCC RNA spike-in mix 1.
+Reads were mapped with the kallisto pseudo-aligner to the reference genome.
 
 Percentage of reads that map is shown for all the samples. Samples labelled as control are separated for comparison.
 
@@ -82,15 +87,18 @@ Percentage of reads that map is shown for all the samples. Samples labelled as c
 plot(plot_map_percent)
 ```
 
-\newpage 
+```{r scatter_mapping_rate}
+for (pidx in 1:nrow(summary(plot_mapping_rate))){
+  plot(plot_mapping_rate[[pidx]])
+}
+```
+
+\newpage
 
 ## Cumulative distribution of expression
+The following plot shows the proportion of the library (y-axis) covered by the top 300 most expressed transcripts (x-axis) for the given sample.
 
-
-The following plot shows, for the transcripts with the highest expression levels (top 1-300) for the sample, proportion of the sample's library (y-axis) covered by which number of those transcripts (x-axis).
-
-Distributions which rise high quickly are samples which are dominated by low number of transcripts while the ones having a less steep rise have counts more evenly distributed.
-Wells with less diverse count distribution are more similar to empty wells and might indicate lower quality or damaged cells.
+Distributions which rise high quickly are samples which are dominated by low number of transcripts while the ones having a less steep rise have counts more evenly distributed. Wells with less diverse count distribution are more similar to empty wells and might indicate lower quality or damaged cells.
 
 ```{r cumulative_distrib}
 plot(plot_cumulative_dist)
@@ -100,10 +108,7 @@ plot(plot_cumulative_dist)
 
 ## Most highly expressed transcripts
 
-Shown are top 50 features by the proportion of counts they take in all samples.
-Feature names (as Ensembl transcripts or annotated control features) denote samples on the y-axis with the percentage of counts they capture on the x-axis. Circle shows the proportion across all samples with proportion for each of samples shown on the same line.
-
-If applicable, spike-ins (ERCC) and mitochondrial transcripts are labelled. Their high percentages could be indicative of poor samples although some samples have a naturally higher percentage.
+Shown are top 50 features by the proportion of counts they take in all samples. Feature names (as Ensembl transcripts or annotated control features) denote samples on the y-axis with the percentage of counts they capture on the x-axis. A circle shows the mean proportion across all samples with proportion for each of samples shown on the same line.
 
 ```{r highest_expression}
 plot(plot_highest_expression)
@@ -119,29 +124,38 @@ The relationship between the two variables is typically sigmoidal looking.
 
 The vertical dashed line is the median of expression levels across the samples.
 The horizontal dashed line is at 50% of expression presence - dots above are transcripts which are expressed in more than 50% of the samples.
-
-
-```{r expression_vs_mean}
-plot(plot_expr_vs_mean)
+```{r}
+if (length(unique(per_cell_table$plate_id))==1){
+  tmp_plateid <- unique(per_cell_table$plate_id)
+} else {
+  tmp_plateid <- 'all'
+}
+pngfile=paste0(output_dir,'/QC_meanexp_vs_freq',tmp_plateid,'.png')
+#![test string](`r pngfile`)
+#![test string](/Volumes/core-bioinformatics/analysis/CB-PPBFX-1067_Claudia_Ribeiro_de_Almeida_BI_CR_ENQ-5220_A_01_Smart-Seq2_QC/Analysis/scqc_reqs-0.2.2/run2/qc_dir/QC_meanexp_vs_freqR0881-P0004.png)
+knitr::include_graphics(pngfile)
 ```
+
 
 \newpage
 
 ## Scatterplots
 
-Following scatterplots show, for all of the samples and their total counts, their transcript number, proportion of control transcripts (mitochondrial and ERCC) and proportion of mitochondrial transcript. 
+Following scatterplots show, for all of the samples and their total counts, their transcript number, proportion of mitochondrial transcript and proportion of ERCC transcript.
 
 ```{r featurenumber_vs_counts}
-plot(plot_featurenum_vs_counts)
-```
-
-```{r fctrl_scatterplot}
-plot(plot_fctrl_scatter)
+for (pidx in 1:nrow(summary(plot_featurenum_vs_counts))) {
+  plot(plot_featurenum_vs_counts[[pidx]])
+}
 ```
 
 ```{r mito_scatterplot, echo=FALSE}
 plot(plot_mito_scatter)
 
+```
+
+```{r ercc_scatter}
+plot(plot_ercc_scatter)
 ```
 
 \newpage
@@ -151,8 +165,6 @@ cat("## Plate position plots
 
 For each of the samples, their position on the plate and the corresponding metric (counts, percentage of mitochondrial counts, percentage of ERCC/spike-in counts) are shown.")
 ```
-
-
 
 ```{r plate_counts, eval=is_plate}
 plot(plot_plate_counts)
@@ -164,54 +176,64 @@ plot(plot_plate_counts)
 plot(plot_plate_mito)
 ```
 
-
-
 ```{r plate_ercc, eval=is_plate}
 plot(plot_plate_ercc)
 ```
 
+## Violin plots
+
+```{r plot_violin}
+for (pidx in 1:nrow(summary(plot_violin_scatter))) {
+  plot(plot_violin_scatter[[pidx]])
+}
+```
+
 \newpage
-
-
 
 ## Dimensionality reductions
 
 Dimensionality reductions summarise the large feature space with a smaller number of dimensions aiming to capture most of the variance in the data.
 
-Principal component analysis (PCA) and t-SNE are one of the most common methods.
-PCA makes new dimensions by trying to capture as much as variance as possible in the top ones while t-SNE tries to place the samples in 2 dimensions in a way which best captures the similarities and differences of the samples.
+Principal component analysis (PCA) and t-SNE are one of the most common methods. PCA makes new dimensions by trying to capture as much as variance as possible in the top ones, while t-SNE tries to place the samples in 2 dimensions in a way which best captures the similarities and differences of the samples.
 
 PCA/t-SNE dimensions are derived from the expression profiles of all the transcripts and visualised in the following scatterplots.
 
-Samples generally similar to each other will be closer.
+Samples similar in expression profile will be plotted closer together.
 
 ### PCA
 
-```{r pca}
-plot(plot_pca)
+```{r pca_GEX}
+plot(plot_pca[[1]])
 ```
 
 \newpage
 
-### t-SNE
+### UMAP
 
-```{r tsne}
-plot(plot_tsne)
+```{r UMAP}
+# plot(plot_pca)
+for (pidx in 2:nrow(summary(plot_pca))){
+  plot(plot_pca[[pidx]])
+}
+```
+
+### UMAP on MT/ERCC
+
+```{r UMAP_ctr}
+for (pidx in 1:nrow(summary(plot_pca_ctr))){
+  plot(plot_pca_ctr[[pidx]])
+}
 ```
 
 ## Outliers and key metrics per sample
 
-Accompanying spreadsheet (`Per_sample_key_metrics.tsv`) contains the value for some of the most important metrics, position on the plate, control information and whether or not the sample is considered outlier in the population when it comes to number of counts, different features (transcripts) and percentage of counts which are mitochondrial or spike-in.
+The accompanying spreadsheet (`Per_sample_key_metrics.tsv`) contains the value for some of the most important metrics, position on the plate, control information and whether or not the sample is considered an outlier in the population when it comes to mapping rate, and percentage of counts which are mitochondrial.
 
-If a sample is top or bottom 10%, it is considered as an outlier.
+If a sample's average read mapping rate is below 50%, or the mitochondrial percentage is over 10%, the sample is consider as an outlier.
 
-Being an outlier on one metric is unlikely to be of much concern, but if the same sample is an outlier across all 3 it could be a sign of an unviable sample.
+Being an outlier on one metric is unlikely to be of much concern, but if the same sample is an outlier in both metrics, it could be a sign of an unviable sample.
 
-Following samples have been marked as **outliers**.
-
-On all 3 outlier metrics:
-
-`r out3`
+The following samples have been marked as **outliers**.
 
 For 2 outlier metrics:
 
@@ -221,16 +243,17 @@ For 2 outlier metrics:
 
 Exact information for the metrics used in the generation of this document can be found in the accompanying table - `Per_sample_key_metrics.tsv`
 
-By default, it contains the following information: 
+By default, it contains the following information:
 
-* Plate position
-* Outlier status for the number of counts, features and proportion of mitochondrial/spike-in counts
-* Outlier hits - the number of times that sample has been labeled as an outlier
-* Total counts
-* Total features (transcripts)
-* Percentage of counts belonging to mitochondrial transcripts
-* Percentage of counts belonging to spike-ins
-* Percentage of counts covered by top 100 features
-
-
-
+-   plate_id
+-   fastqname
+-   plate_position
+-   outlier_hits - the number of times that sample has been labeled as an outlier
+-   outlier_pct_MT - TRUE if a sample meets the outlier metric on mitochondrial percentage
+-   outlier_mapping reate - TRUE if a sample meets the outlier metric on average read mapping rate
+-   sum - total counts
+-   detected - total expressed features (transcripts)
+-   subsets_mitochondrial_percent - Percentage of counts belonging to mitochondrial transcripts
+-   subsets_ERCC_percent - Percentage of counts belonging to spike-ins
+-   map_rate - average read mapping rate
+-   is_cell_control

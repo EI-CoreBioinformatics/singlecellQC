@@ -1,0 +1,4 @@
+#!/bin/bash
+
+PATH=/ei/software/cb/eipap/2.14.2/x86_64/bin:/ei/software/cb/eimap/2.1.4/x86_64/bin:/ei/software/cb/python_miniconda/4.9.2_py3.8_pap/x86_64/bin:/ei/software/cb/git/2.26.2_CBG/x86_64/bin:/ei/cb/common/Scripts:/tgac/software/production/bin/core/../..//hpccore/5/x86_64/bin:/usr/users/ga002/tgacpap/bin:/ei/software/cb/bin:/usr/local/bin:/usr/bin:/usr/local/sbin:/usr/sbin:/tgac/software/production/bin:/tgac/software/production/libraries/bin \
+source nextflow-22.04.0_CBG
