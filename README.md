@@ -26,7 +26,31 @@ The pipeline does not require internet connection, but some required files have 
 * R 4.1.2 and R packages (scater 1.22.0, ggplot2, dplyr, knitr, rjson)
 * singularity 3.8.7
 
-
+## Preprocessing
+1. convert the sample sheet to UNIX format
+```
+source dos2unix-7.4.1_CBG
+dos2unix -n old_samplesheet samplesheet
+```
+2. format read names. The pipeline can take symbolic links and requires read names in the following format: 
+```
+${Sample_Plate}_${demultiplexed_readname}
+``` 
+An example of formating read names using sample sheet information:
+```
+for line in `sed 1,1d samplesheet`; do
+    plateID=`echo $line | cut -d "," -f 4 `
+    sampleID=`echo $line | cut -d "," -f 2 `
+    if [ -d $rawread_root/$sampleID ]; then
+        sample_dir=`ls -d $rawread_root/$sampleID`
+        for gzfile in `ls $sample_dir/*.fastq.gz`; do
+            tmpname=`basename $gzfile`
+            # add plateID to prefix of basename
+            ln -v -f -s $gzfile symlink_dir/$plateID"_"$tmpname
+        done
+    fi
+done
+```
 ## Running the pipeline
 
 Pipeline is written in Nextflow, so a run is usually initiated in the following way:
