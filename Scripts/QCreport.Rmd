@@ -70,12 +70,12 @@ The kallisto quantifications for each of the samples and merged expression matri
 
 Tools used in the quality control pipeline are:
   
-  -   kallisto 0.44.0
+-   kallisto 0.48.0
 -   R 4.1.2
 -   R markdown
--   R packages: scater 1.22.0, ggplot2, dplyr, knitr, rjson
--   nextflow 22.04.0
--   singularity 3.8.7
+-   R packages: scater 1.28.0, ggplot2, dplyr, knitr, rjson
+-   nextflow 
+-   singularity 
 
 ## Read mapping
 
@@ -86,6 +86,8 @@ Percentage of reads that map is shown for all the samples. Samples labelled as c
 ```{r mapping_percent}
 plot(plot_map_percent)
 ```
+
+\newpage
 
 ```{r scatter_mapping_rate}
 for (pidx in 1:nrow(summary(plot_mapping_rate))){
@@ -124,7 +126,7 @@ The relationship between the two variables is typically sigmoidal looking.
 
 The vertical dashed line is the median of expression levels across the samples.
 The horizontal dashed line is at 50% of expression presence - dots above are transcripts which are expressed in more than 50% of the samples.
-```{r}
+```{r include_png}
 if (length(unique(per_cell_table$plate_id))==1){
   tmp_plateid <- unique(per_cell_table$plate_id)
 } else {
@@ -158,8 +160,6 @@ plot(plot_mito_scatter)
 plot(plot_ercc_scatter)
 ```
 
-\newpage
-
 ```{r conditional_plate_position_chunk, echo=FALSE, results='asis', eval=is_plate}
 cat("## Plate position plots
 
@@ -169,8 +169,6 @@ For each of the samples, their position on the plate and the corresponding metri
 ```{r plate_counts, eval=is_plate}
 plot(plot_plate_counts)
 ```
-
-\newpage
 
 ```{r plate_mitochondrial, eval=is_plate}
 plot(plot_plate_mito)
@@ -206,8 +204,6 @@ Samples similar in expression profile will be plotted closer together.
 plot(plot_pca[[1]])
 ```
 
-\newpage
-
 ### UMAP
 
 ```{r UMAP}
@@ -224,6 +220,7 @@ for (pidx in 1:nrow(summary(plot_pca_ctr))){
   plot(plot_pca_ctr[[pidx]])
 }
 ```
+\newpage
 
 ## Outliers and key metrics per sample
 
