@@ -10,8 +10,6 @@ The pipeline does not require internet connection, but some required files have 
 
 ## Inputs
 
-* Demulitplexed read data (.fastq.gz)
-* Sample sheet (.csv)
 * Config file
 
 ## Outputs
@@ -30,12 +28,43 @@ The pipeline does not require internet connection, but some required files have 
 * singularity 2.4.2
 * pandoc, texlive, ghostscript
 
-
+## Preprocessing
+1. convert the sample sheet to UNIX format
+```
+source dos2unix-7.4.1_CBG
+dos2unix -n old_samplesheet samplesheet
+```
+2. format read names. The pipeline can take symbolic links and requires read names in the following format: 
+```
+${Sample_Plate}_${demultiplexed_readname}
+``` 
+An example of formating read names using sample sheet information:
+```
+for line in `sed 1,1d samplesheet`; do
+    plateID=`echo $line | cut -d "," -f 4 `
+    sampleID=`echo $line | cut -d "," -f 2 `
+    if [ -d $rawread_root/$sampleID ]; then
+        sample_dir=`ls -d $rawread_root/$sampleID`
+        for gzfile in `ls $sample_dir/*.fastq.gz`; do
+            tmpname=`basename $gzfile`
+            # add plateID to prefix of basename
+            ln -v -f -s $gzfile symlink_dir/$plateID"_"$tmpname
+        done
+    fi
+done
+```
 ## Running the pipeline
 
 Pipeline is written in Nextflow, so a run is usually initiated in the following way:
 `nextflow run scqc_nf.sh -c config_file &`
 
+As a batch job to HPC:
+```
+sbatch -p ei-cb -J jobname -o jobname.%j.log -c 1 --mem 10G \
+    --mail-type=ALL --mail-user=user@email.com \
+    --wrap "source /ei/cb/common/Scripts/singlecellQC/v1.0/scqc_reqs-1.0 && \
+    nextflow run scqc_nf.sh -c config_file -with-report -resume"
+```
 Examples of a config file and sample sheet are in the repository.
 
 ## Config file
@@ -43,7 +72,7 @@ Examples of a config file and sample sheet are in the repository.
 Parameters inside 'params' scope can be passed when starting the pipeline by adding them at the end of the pipeline start call, e.g.
 'nextflow run scqc_nf.sh -c scqc.config --qcoutdir=my_qc_directory'. Alternatively, they can be edited in the config file.
 
-Parameters related to the output, organism species and this pipeline specifics.
+Parameters related to the output, organism species and this pipeline.
 
 * quantificationsdir - Directory to contain qunatifications produced for each of the samples and the counts matrices
 * qcoutdir' - Directory to contain the final QC report and other QC-related files
@@ -54,7 +83,6 @@ Parameters related to the output, organism species and this pipeline specifics.
     samples into plate-level matrices which are then used for plate-level QC.
 * mtnamefile - In case of non-human species, .rds file for mitochondrial gene. Leave empty ('') if human.
     This is a vector in R, containing the list of Ensembl transcript IDs, saved as .rds (using saveRDS())
-* idx - Location of the kallisto index to use. Indices are precomputed. If you want to use a new one, one can be build with 'kallisto index'.
 * pattern - The format of the FASTQ endings showing how they should be grouped, as a glob pattern
 * trans2gen_tsv - Transcript id to gene id mapping tsv file
 
@@ -77,7 +105,8 @@ For more information on configuration file options, check out [nextflow document
 
 Sample sheet will be unique for every run.
 
-It is a .csv file that has to have the following columns. Additional columns are not a problem, but are not used.
+It is a .csv file that has to have the following columns. Additional columns are not a problem, but are not used. 
+Make sure there is no white space in any entries.
 
 * Sample_ID, Sample_Name - These two columns are also in the Illumina sample sheet.
 * Sample_Plate - A string corresponding to one of the plates used in the experiment
