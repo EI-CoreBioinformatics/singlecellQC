@@ -38,21 +38,15 @@ dos2unix -n old_samplesheet samplesheet
 ```
 ${Sample_Plate}_${demultiplexed_readname}
 ``` 
-An example of formating read names using sample sheet information:
+For example, the following FASTQ file from plate `CUB35DAY0` with a filename:
 ```
-for line in `sed 1,1d samplesheet`; do
-    plateID=`echo $line | cut -d "," -f 4 `
-    sampleID=`echo $line | cut -d "," -f 2 `
-    if [ -d $rawread_root/$sampleID ]; then
-        sample_dir=`ls -d $rawread_root/$sampleID`
-        for gzfile in `ls $sample_dir/*.fastq.gz`; do
-            tmpname=`basename $gzfile`
-            # add plateID to prefix of basename
-            ln -v -f -s $gzfile symlink_dir/$plateID"_"$tmpname
-        done
-    fi
-done
+R0882-S0001_A68701_CUB35DAY0A10_H3VY5DRX2_CGTACTAG-AGAGGATA_L001_R1.fastq.gz
 ```
+becomes
+```
+CUB35DAY0_R0882-S0001_A68701_CUB35DAY0A10_H3VY5DRX2_CGTACTAG-AGAGGATA_L001_R1.fastq.gz
+```
+
 ## Running the pipeline
 
 Pipeline is written in Nextflow, so a run is usually initiated in the following way:
