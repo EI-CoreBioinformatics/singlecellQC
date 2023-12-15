@@ -52,15 +52,18 @@ CUB35DAY0_R0882-S0001_A68701_CUB35DAY0A10_H3VY5DRX2_CGTACTAG-AGAGGATA_L001_R1.fa
 Pipeline is written in Nextflow, so a run is usually initiated in the following way:
 `nextflow run scqc_nf.sh -c config_file &`
 
-As a batch job to HPC:
+Examples of a config file and sample sheet are in the repository.
+
+An example:
+
 ```
-sbatch -p ei-cb -J scqc -o scqc.%j.%N.log -c 1 --mem 10G \
-    --mail-type=ALL --mail-user=user@email.com \
+cd /ei/cb/development/lany/CB-GENANNO-525_Charlotte_Utting_EI_CU_ENQ-5286_A_01/Analysis/scqc_reqs-1.1/4plates.run2
+sbatch -p ei-cb -J scqc_GENANNO-525.all_plate -o scqc_GENANNO-525.all_plate.%j.%N.log -c 1 --mem 10G \
+    --mail-type=ALL --mail-user=user.email.com \
     --wrap "source singlecellQC-1.1_CBG && cd $analysis_dir && \
     nextflow run /ei/software/cb/singlecellQC/1.1/x86_64/bin/scqc_nf.sh \
-    -c ./sample_data/GENANNO-525.scqc-1.1.all_plates.config -with-report -resume"
+    -c GENANNO-525.scqc-1.1.all_plates.config -with-report -resume"
 ```
-Examples of a config file and sample sheet are in the repository.
 
 ## Config file
 
