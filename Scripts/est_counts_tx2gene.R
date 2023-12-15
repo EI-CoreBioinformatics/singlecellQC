@@ -2,11 +2,6 @@
 # library(tidyverse)
 library(dplyr)
 
-
-# tx2gene_counts <- function(counts_table_location, outloc, species="Hsapiens",
-#                            hdb="../References/human_mart_db.rds",
-#                            mdb="../References/mouse_mart_db.rds",
-#                            cdb="../References/btaurus_gene_ensembl_mart_db.rds"){
 tx2gene_counts <- function(counts_table_location, outloc, species="Bos_taurus",
                            dbfile="/ei/cb/development/lany/CB-Iain_Macaulay_EI_CU_ENQ-5072_A_01/Scripts/scqc/References/btaurus_gene_ensembl_mart_db.rds")
 {
@@ -40,7 +35,6 @@ tx2gene_counts <- function(counts_table_location, outloc, species="Bos_taurus",
     # removing transcripts without an associated gene name
     c_matrix <- c_matrix[-which(c_matrix$gene_name==""),]
   } else {
-  # } else if (species=="Mmusculus"||species=="Bos_taurus_with_TParva" || species=="Gallus_gallus"){
     # c_matrix rowname: "transcript:ENSBTAT00000007786" ; ids: ENSBTAT00000007786
     ids <- rownames(c_matrix) %>% gsub("transcript:","",.)
     c_matrix$gene_name <- mapping_matrix[match(ids, mapping_matrix$transcript),]$gene 
@@ -49,17 +43,6 @@ tx2gene_counts <- function(counts_table_location, outloc, species="Bos_taurus",
       c_matrix <- c_matrix[-which(c_matrix$gene_name==""),]
     }
   }
-  # } else if (species=="Mmusculus"){
-  #   # c_matrix rowname: "transcript:ENSBTAT00000007786" ; ids: ENSBTAT00000007786
-  #   ids <- rownames(c_matrix) %>% gsub("transcript:","",.)
-  #   c_matrix$gene_name <- mapping_matrix[match(ids, mapping_matrix$transcript),]$gene 
-  #   # removing transcripts without an associated gene name
-  #   if (length(which(c_matrix$gene_name==""))>0){
-  #     c_matrix <- c_matrix[-which(c_matrix$gene_name==""),]
-  #   }
-  
-
-
   
   # R magic
   gene_level_matrix <- aggregate(. ~ gene_name, c_matrix, sum)

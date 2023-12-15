@@ -38,9 +38,6 @@ process p_kal {
 
 
 process q_merge {
-	queue 'ei-cb'
-	memory '5G'
-
 	label "image_rscater"
 	tag "$plate_id"	
 	errorStrategy 'finish'
@@ -99,8 +96,6 @@ process gs {
 }
 
 process doc {
-	queue 'ei-cb'
-	memory '10G'
 	label "image_rknit"
 
 	publishDir "$params.qcoutdir", mode: 'copy'
@@ -159,19 +154,6 @@ process tx2g {
 }
 
 workflow QC_AND_DOC {
-	take: 
-		est_counts_file 
-		pc_pseudoalign_file
-		plate_ids
-	main:
-		qc( est_counts_file, pc_pseudoalign_file )
-	  gs(qc.out.collect(), plate_ids)
-	  doc( qc.out.collect(), gs.out.collect(), plate_ids )
-	emit: 
-		doc.out
-}
-
-workflow QC_AND_DOC_REPEAT {
 	take: 
 		est_counts_file 
 		pc_pseudoalign_file
