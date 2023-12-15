@@ -54,10 +54,11 @@ Pipeline is written in Nextflow, so a run is usually initiated in the following 
 
 As a batch job to HPC:
 ```
-sbatch -p ei-cb -J jobname -o jobname.%j.log -c 1 --mem 10G \
+sbatch -p ei-cb -J scqc -o scqc.%j.%N.log -c 1 --mem 10G \
     --mail-type=ALL --mail-user=user@email.com \
-    --wrap "source /ei/cb/common/Scripts/singlecellQC/v1.0/scqc_reqs-1.0 && \
-    nextflow run scqc_nf.sh -c config_file -with-report -resume"
+    --wrap "source singlecellQC-1.1_CBG && cd $analysis_dir && \
+    nextflow run /ei/software/cb/singlecellQC/1.1/x86_64/bin/scqc_nf.sh \
+    -c ./sample_data/GENANNO-525.scqc-1.1.all_plates.config -with-report -resume"
 ```
 Examples of a config file and sample sheet are in the repository.
 
