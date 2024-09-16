@@ -2,7 +2,7 @@
 # library(tidyverse)
 library(dplyr)
 
-tx2gene_counts <- function(counts_table_location, outloc, species="Bos_taurus",
+tx2gene_counts <- function(counts_table_location, output_tsv, species="Bos_taurus",
                            dbfile="/ei/cb/development/lany/CB-Iain_Macaulay_EI_CU_ENQ-5072_A_01/Scripts/scqc/References/btaurus_gene_ensembl_mart_db.rds")
 {
   c_matrix <- read.table(counts_table_location, header = T, sep='\t',
@@ -48,7 +48,8 @@ tx2gene_counts <- function(counts_table_location, outloc, species="Bos_taurus",
   gene_level_matrix <- aggregate(. ~ gene_name, c_matrix, sum)
   rownames(gene_level_matrix) <- gene_level_matrix$gene_name
   
-  write.table(gene_level_matrix[,-1], paste0(outloc,"plates_as_genelevel.tsv"), sep='\t')
+  # write.table(gene_level_matrix[,-1], paste0(outloc,"plates_as_genelevel.tsv"), sep='\t')
+  write.table(gene_level_matrix[,-1], output_tsv, sep='\t') #wu
 }
 
 
@@ -61,9 +62,6 @@ if(sys.nframe()==0){
   
   if(!file.exists(args[1]))
     stop(paste0("<--- Matrix file ('",args[1],"') not found! --->"))
-  
-  if(!file.exists(args[2]))
-    stop(paste0("<--- Tx2g output location ('",args[2],"') not found! --->"))
   
   if(length(args)<2)
     stop("<--- Missing arguments in tx2g call! --->")

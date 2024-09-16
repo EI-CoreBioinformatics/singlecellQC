@@ -3,7 +3,7 @@ title: "SmartSeq2 quality control report"
 output: pdf_document
 ---
   
-  ```{r setup0, include=FALSE}
+```{r setup0, include=FALSE}
 library(dplyr)
 ```
 
@@ -21,10 +21,11 @@ options(tinytex.verbose = TRUE)
 ```
 
 ```{r preprocessing}
+
 # pass .Rdata with: Rscript -e "objects=Rdata; rmarkdown::render('test.rmd')"
 
 if(!exists("objects")) stop("<--- scater files not passed to .Rmd! --->")
-
+getwd()
 load(objects)
 output_dir=dirname(objects)
 # concatenating outlier names to a single string
@@ -39,10 +40,20 @@ colnames(mapping_file) <- c("full_name","percentage")
 mean_mapping <- mapping_file[1,]
 mapping_file <- mapping_file[2:nrow(mapping_file),]
 sample_names <- rownames(per_cell_table)
-mapping_file <- sample_names %>%
-  sapply(function(id) grep(id, mapping_file[[1]])) %>%
-  unlist %>% mapping_file[.,]
+
+# when quant dir is fastqname:
+# mapping_file <- sample_names %>%
+#   sapply(function(id) grep(id, mapping_file[[1]])) %>%
+#   unlist %>% mapping_file[.,]
+
+# mapping_file <- sapply(sample_names, 
+#                        function(id) mapping_file[[1]] %in% id) %>% apply(1,which) %>% mapping_file[.,]
+
+mapping_file <- sapply(sample_names, 
+                       function(id) mapping_file[,1] %in% id %>% which()) %>% as.vector() %>% mapping_file[.,]
+
 mapping_file$sample <- sample_names
+
 mapping_file$is_cell_control <- per_cell_table$is_cell_control
 is_cell_control <- ifelse(sum(mapping_file$is_cell_control)>0, T, F)
 
@@ -62,7 +73,7 @@ The data in this document is generated for plate `r plate_id`.
 
 Additional information regarding quality control can be found in the same folder as this report:
   
-  -   QC metrics and outlier information per sample
+-   QC metrics and outlier information per sample
 -   alignment percentages per sample
 -   plots used in this document
 
@@ -132,7 +143,28 @@ if (length(unique(per_cell_table$plate_id))==1){
 } else {
   tmp_plateid <- 'all'
 }
-pngfile=paste0(output_dir,'/QC_meanexp_vs_freq',tmp_plateid,'.png')
+
+# this tries to dereference the png symlink but doesn't work.
+if (F){
+  is.symlink <- function(paths) isTRUE(nzchar(Sys.readlink(paths), keepNA=TRUE))
+  getwd()
+  pngfile=paste0('rename_QC_meanexp_vs_freq',tmp_plateid,'.png')
+  if (file.exists(pngfile)) {
+    sprintf('1 pngfile exist %s', pngfile)
+  } else {
+    sprintf('1 pngfile exist %s', pngfile)
+  }
+  if (is.symlink(pngfile)) {
+    pngfile <- Sys.readlink(pngfile)
+  }
+  if (file.exists(pngfile)) {
+    sprintf('2 pngfile exist %s', pngfile)
+  } else {
+    sprintf('2 pngfile exist %s', pngfile)
+  }
+}
+
+# pngfile=paste0('../QC_meanexp_vs_freq',tmp_plateid,'.png') #wu
 #![test string](`r pngfile`)
 #![test string](/Volumes/core-bioinformatics/analysis/CB-PPBFX-1067_Claudia_Ribeiro_de_Almeida_BI_CR_ENQ-5220_A_01_Smart-Seq2_QC/Analysis/scqc_reqs-0.2.2/run2/qc_dir/QC_meanexp_vs_freqR0881-P0004.png)
 knitr::include_graphics(pngfile)

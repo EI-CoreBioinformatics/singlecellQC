@@ -12,7 +12,7 @@
 #'
 #' @examples
 merge_kallisto_quant <- function(folders_loc="~/AThaliana/kallisto_q/",
-                                 metric="tpm", plate_id=NULL){
+                                 metric="tpm", plate_id=NULL, plateqc_dir=NULL){
 
 	kquant_folds <- list.dirs(folders_loc, full.names = F)
 	kquant_folds <- unique(gsub("/.*$","",kquant_folds))
@@ -26,7 +26,8 @@ merge_kallisto_quant <- function(folders_loc="~/AThaliana/kallisto_q/",
 	  kquant_folds <- grep(plate_id, kquant_folds, value = T)
 	}
 	sample_names <- kquant_folds
-	abundance_paths <- paste0(folders_loc,kquant_folds, "/abundance.tsv")
+	# abundance_paths <- paste0(folders_loc,kquant_folds, "/abundance.tsv")
+	abundance_paths <- file.path(folders_loc, kquant_folds, "abundance.tsv") #wu
 
 	singleton <- read.table(abundance_paths[1], header=T)
 	index <- which(colnames(singleton)==metric)
@@ -54,8 +55,14 @@ merge_kallisto_quant <- function(folders_loc="~/AThaliana/kallisto_q/",
 		plate_label <-  as.character(plate_id)
 	}
 
-	write.table(tpm_matrix, paste0(folders_loc,metric,
-	                               plate_label,"_matrix.tsv"), sep = "\t")
+	# write.table(tpm_matrix, paste0(folders_loc,metric,
+	                               # plate_label,"_matrix.tsv"), sep = "\t")
+	if (is.null(plateqc_dir)) {
+  	matrix_path = file.path(folders_loc, paste0(metric, plate_label,"_matrix.tsv")) #wu					   
+	} else {
+	  matrix_path = file.path(plateqc_dir, paste0(metric, plate_label,"_matrix.tsv")) #wu					   
+	}
+	write.table(tpm_matrix, matrix_path, sep = "\t") #wu			   
 }
 
 if(sys.nframe()==0){
@@ -64,8 +71,8 @@ if(sys.nframe()==0){
 		stop(">>> Folders location not found! <<<")
 	column_metric <- ifelse(length(args)>1, args[2],"tpm")
   pid <- ifelse(length(args)>2, args[3], NULL)
-	
-	merge_kallisto_quant(args[1], column_metric, pid)
+  plateqc_dir <- ifelse(length(args)>3, args[4], NULL)
+	merge_kallisto_quant(args[1], column_metric, pid, plateqc_dir)
 }
 
 

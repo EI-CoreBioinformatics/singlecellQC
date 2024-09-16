@@ -25,180 +25,15 @@ library(scater)
 scqc_from_tsv <- function(tsv_location, pct_pseudo_txt, output_location="./",
                           sheet_file=NULL, mt_file=NULL) {
   plot_pct_TParva=F
-  # test for GENANNO-552_Charlotte_Utting_EI_CU_ENQ-5476_A_01
-  if (F){
-    rundir='/Volumes/core-bioinformatics/analysis/CB-GENANNO-552_Charlotte_Utting_EI_CU_ENQ-5476_A_01/Analysis/scqc_reqs-0.2.4/run1'
-    mt_file='/Volumes/core-bioinformatics/common/Databases/scqc/Bos_taurus/ARS-UCD1.2/MT_cow_vector.rds'
-    
-    # rundir='/ei/cb/analysis/CB-GENANNO-552_Charlotte_Utting_EI_CU_ENQ-5476_A_01/Analysis/scqc_reqs-0.2.4/run1'
-    # mt_file='/ei/cb/common/Databases/scqc/Bos_taurus/ARS-UCD1.2/MT_cow_vector.rds'
-    # tsv_location <- file.path(rundir,'quants_dir/est_countsCUB5709DAY69_matrix.tsv');
-    tsv_location <- file.path(rundir,'quants_dir/all_plates.tsv');
-    pct_pseudo_txt <- file.path(rundir, 'qc_dir/percent_pseudoaligned.txt');
-    output_location <- file.path(rundir,'qc_dir');
-    sheet_file <- file.path(rundir,'SampleSheetPIP-3109.v2.unix.csv');
-    plot_pct_TParva=F
-    is_test=F
-  }
-  # test for PPBFX979
+  is_test=F
   if (F) {
-    tsv_location="/ei/cb/analysis/CB-PPBFX-979_Iain_Macaulay_EI_CU_ENQ-5072_A_01/Analysis/run2.theleria_parva/scqc_reqs-0.1/quants_dir/all_plates.tsv"
-    pct_pseudo_txt <- "/ei/cb/analysis/CB-PPBFX-979_Iain_Macaulay_EI_CU_ENQ-5072_A_01/Analysis/run2.theleria_parva/scqc_reqs-0.1/qc_dir/percent_pseudoaligned.txt"
-    output_location="/ei/cb/development/lany/CB-Iain_Macaulay_EI_CU_ENQ-5072_A_01/Analysis/scqc_reqs-0.2/test1/quants_dir/"
-    sheet_file="/ei/cb/development/lany/CB-Iain_Macaulay_EI_CU_ENQ-5072_A_01/Analysis/scqc_reqs-0.2/test1/CowSeq_Datasheet.v3.unix.csv"
-    mt_file="/ei/cb/common/Databases/scqc/Bos_taurus/ARS-UCD1.2/MT_cow_vector.rds"
-    plot_pct_TParva=T
-    is_test=T
-    plate_id <- 'all'
-  } else {
-    plot_pct_TParva=F
-    is_test=F
+    tsv_location="/Users/lany/mount_drives/HPC_Projects/6/69ea60ec-ae6f-4476-93d9-e6927e9d3c3a/data/results/Yuxuan_Lan/CB-GENANNO-590_Huihai_Wu_Smart-Seq2_smk_SCQC_pipeline_evaluation/Analysis/smartseq2QC-Jul2024/smartseq2QC/1plate.run5/qc_dir/HSCQ051PL1/est_countsHSCQ051PL1_matrix.tsv"
+    pct_pseudo_txt <- "/Users/lany/mount_drives/HPC_Projects/6/69ea60ec-ae6f-4476-93d9-e6927e9d3c3a/data/results/Yuxuan_Lan/CB-GENANNO-590_Huihai_Wu_Smart-Seq2_smk_SCQC_pipeline_evaluation/Analysis/smartseq2QC-Jul2024/smartseq2QC/1plate.run5/qc_dir/percent_pseudoaligned.txt"
+    output_location="/Users/lany/mount_drives/HPC_Projects/6/69ea60ec-ae6f-4476-93d9-e6927e9d3c3a/data/results/Yuxuan_Lan/CB-GENANNO-590_Huihai_Wu_Smart-Seq2_smk_SCQC_pipeline_evaluation/Analysis/smartseq2QC-Jul2024/smartseq2QC/1plate.run5/qc_dir/HSCQ051PL1"
+    sheet_file="/Users/lany/mount_drives/HPC_Projects/6/69ea60ec-ae6f-4476-93d9-e6927e9d3c3a/data/results/Yuxuan_Lan/CB-GENANNO-590_Huihai_Wu_Smart-Seq2_smk_SCQC_pipeline_evaluation/Analysis/smartseq2QC-Jul2024/smartseq2QC/1plate.run5/SampleSheet.PPBFX-1209.3_meta.v2.1plates.run1.unix.csv"
+    mt_file="/Users/lany/mount_drives/HPC_Projects/6/69ea60ec-ae6f-4476-93d9-e6927e9d3c3a/data/scqc_reqs-1.1_examples/CB-PPBFX-1209_Tiago_Luis_ICL_TL_ENQ-5739_A_01_SS2_QC/Reference/GRCm39/MT.Mus_musculus.GRCm39.rds"
   }
-  # test for PPBFX-996
-  if (F) {
-    tsv_location="/ei/cb/analysis/CB-PPBFX-996_Geoff_Mok_UOE_GM_ENQ-5130_A_01/Analysis/scqc_reqs-0.1/run1/quants_dir/all_plates.tsv"
-    pct_pseudo_txt <- "/ei/cb/analysis/CB-PPBFX-996_Geoff_Mok_UOE_GM_ENQ-5130_A_01/Analysis/scqc_reqs-0.1/run1/qc_dir/percent_pseudoaligned.txt"
-    output_location="/ei/cb/analysis/CB-PPBFX-996_Geoff_Mok_UOE_GM_ENQ-5130_A_01/Analysis/scqc_reqs-0.1/run1/quants_dir.test"
-    sheet_file="/ei/cb/analysis/CB-PPBFX-996_Geoff_Mok_UOE_GM_ENQ-5130_A_01/Analysis/scqc_reqs-0.1/run1/SampleSheetPPBFX-996.v1.csv"
-    mt_file="/ei/cb/common/Databases/scqc/Gallus_gallus/GRCg6a/MT_Gallus_gallus_vector.rds"
-    plot_pct_TParva=F
-    is_test=T
-    plate_id <- 'all'
-  } else {
-    plot_pct_TParva=F
-    is_test=F
-  }
-  # test for cow-seq scqc_req-0.2.1 debug, one plate
-  if (F){
-    tsv_location='/ei/cb/development/lany/CB-Iain_Macaulay_EI_CU_ENQ-5072_A_01/Analysis/scqc_reqs-0.2.1/test1/quants_dir/est_countsCU5DAY7_matrix.tsv'
-    pct_pseudo_txt='/ei/cb/development/lany/CB-Iain_Macaulay_EI_CU_ENQ-5072_A_01/Analysis/scqc_reqs-0.2.1/test1/work/89/00f2c164b23995e467f193617be9ae/percent_pseudoaligned.txt'
-    output_location='/ei/cb/development/lany/CB-Iain_Macaulay_EI_CU_ENQ-5072_A_01/Analysis/scqc_reqs-0.2.1/test1/qc_dir.1/'
-    sheet_file='/ei/cb/development/lany/CB-Iain_Macaulay_EI_CU_ENQ-5072_A_01/Analysis/scqc_reqs-0.2/test1/CowSeq_Datasheet.v3.unix.csv'
-    mt_file='/ei/cb/common/Databases/scqc/Bos_taurus/ARS-UCD1.2/MT_cow_vector.rds'
-  }
-  # test for cow-seq scqc_req-0.2.2 debug, all plates
-  if (F){
-    tsv_location='/ei/cb/development/lany/CB-Iain_Macaulay_EI_CU_ENQ-5072_A_01/Analysis/scqc_reqs-0.2.1/test1/quants_dir/all_plates.tsv'
-    pct_pseudo_txt='/ei/cb/development/lany/CB-Iain_Macaulay_EI_CU_ENQ-5072_A_01/Analysis/scqc_reqs-0.2.1/test1/qc_dir/percent_pseudoaligned.txt'
-    output_location='/ei/cb/development/lany/CB-Iain_Macaulay_EI_CU_ENQ-5072_A_01/Analysis/scqc_reqs-0.2.1/test1/qc_dir.2/'
-    sheet_file='/ei/cb/development/lany/CB-Iain_Macaulay_EI_CU_ENQ-5072_A_01/Analysis/scqc_reqs-0.2/test1/CowSeq_Datasheet.v3.unix.csv'
-    mt_file='/ei/cb/common/Databases/scqc/Bos_taurus/ARS-UCD1.2/MT_cow_vector.rds'
-    plot_pct_TParva=F
-    is_test=F
-  }
-  # test for cowseq2 hpc
-  if (F){
-    tsv_location='/ei/cb/analysis/CB-GENANNO-515_Charlotte_Utting_EI_CU_ENQ-5187_A_01/Analysis/scqc_reqs-0.2.1/run1/quants_dir/all_plates.tsv'
-    pct_pseudo_txt='/ei/cb/analysis/CB-GENANNO-515_Charlotte_Utting_EI_CU_ENQ-5187_A_01/Analysis/scqc_reqs-0.2.1/run1/qc_dir/percent_pseudoaligned.txt'
-    output_location='/ei/cb/analysis/CB-GENANNO-515_Charlotte_Utting_EI_CU_ENQ-5187_A_01/Analysis/scqc_reqs-0.2.1/run1/qc_dir/'
-    sheet_file='/ei/cb/analysis/CB-GENANNO-515_Charlotte_Utting_EI_CU_ENQ-5187_A_01/Analysis/scqc_reqs-0.2.1/run1/cowseq_Batch2-data.PSEQ-2345.2.unix.csv'
-    mt_file='/ei/cb/common/Databases/scqc/Bos_taurus/ARS-UCD1.2/MT_cow_vector.rds'
-  }
-  # test for cowseq2 local 1 plate
-  if (F){
-    rundir='/Volumes/core-bioinformatics/analysis/CB-GENANNO-515_Charlotte_Utting_EI_CU_ENQ-5187_A_01/Analysis/scqc_reqs-0.2.2/run1/'
-    tsv_location <- file.path(rundir,'quants_dir/est_countsCUB25DAY0_matrix.tsv');
-    pct_pseudo_txt <- file.path(rundir, 'qc_dir/percent_pseudoaligned.txt');
-    output_location <- file.path(rundir,'qc_dir/');
-    sheet_file <- file.path(rundir,'cowseq_Batch2-data.PSEQ-2345.2.unix.csv');
-    mt_file='/Volumes/core-bioinformatics/common/Databases/scqc/Bos_taurus/ARS-UCD1.2/MT_cow_vector.rds'
-    plot_pct_TParva=T
-    is_test=F
-  }
-  # test for cowseq2 local all plates
-  if (F){
-    rundir='/Volumes/core-bioinformatics/analysis/CB-GENANNO-515_Charlotte_Utting_EI_CU_ENQ-5187_A_01/Analysis/scqc_reqs-0.2.2/run1/'
-    tsv_location <- file.path(rundir,'quants_dir/all_plates.tsv');
-    pct_pseudo_txt <- file.path(rundir, 'qc_dir/percent_pseudoaligned.txt');
-    output_location <- file.path(rundir,'qc_dir/qc_all');
-    sheet_file <- file.path(rundir,'cowseq_Batch2-data.PSEQ-2345.2.unix.csv');
-    mt_file='/Volumes/core-bioinformatics/common/Databases/scqc/Bos_taurus/ARS-UCD1.2/MT_cow_vector.rds'
-    plot_pct_TParva=T
-    is_test=F
-  }
-  # test for chicken2 1 plate
-  if (F){
-    rundir='/Volumes/core-bioinformatics/analysis/CB-GENANNO-516_Gi_Fay_Mok_UOE_GM_ENQ-5204_A_01/Analysis/scqc_reqs-0.2.2/run1/'
-    tsv_location <- file.path(rundir,'quants_dir/est_countsGMPlate16w_matrix.tsv');
-    pct_pseudo_txt <- file.path(rundir, 'qc_dir/percent_pseudoaligned.txt');
-    output_location <- file.path(rundir,'qc_dir');
-    sheet_file <- file.path(rundir,'AS_SampleSheetPSEQ-2347.2.unix.csv');
-    mt_file='/Volumes/core-bioinformatics/common/Databases/scqc/Gallus_gallus/GRCg6a/MT_Gallus_gallus_vector.rds'
-    plot_pct_TParva=F
-    is_test=F
-  }
-  # test for human control 1 plate, no meta data
-  if (F){
-    rundir='/ei/cb/development/lany/CB-GENANNO-523_Karim_Gharbi_EI_KG_ENQ-3708/Analysis/scqc_reqs-0.2.2/run1'
-    tsv_location <- file.path(rundir,'quants_dir/est_countsR0121-P0002_matrix.tsv');
-    pct_pseudo_txt <- file.path(rundir, 'qc_dir/percent_pseudoaligned.txt');
-    output_location <- file.path(rundir,'qc_dir');
-    sheet_file <- file.path(rundir,'SampleSheetPSEQ-2015.v2.unix.csv');
-    mt_file='/ei/cb/common/Databases/scqc/Homo_sapiens.with.ERCC/GRCh38_and_ERCC92/MT_GRCh38_vector.rds'
-    plot_pct_TParva=F
-    is_test=F
-  }
-  # test for human control 1 plate, with meta data
-  if (F){
-    # rundir='/ei/cb/development/lany/CB-GENANNO-523_Karim_Gharbi_EI_KG_ENQ-3708/Analysis/scqc_reqs-0.2.2/run2.metadata'
-    rundir="/Volumes/core-bioinformatics/development/lany/CB-GENANNO-523_Karim_Gharbi_EI_KG_ENQ-3708/Analysis/scqc_reqs-0.2.2/run2.metadata"
-    tsv_location <- file.path(rundir,'quants_dir/est_countsR0121-P0001_matrix.tsv');
-    pct_pseudo_txt <- file.path(rundir, 'qc_dir/percent_pseudoaligned.txt');
-    output_location <- file.path(rundir,'qc_dir');
-    sheet_file <- file.path(rundir,'SampleSheetPSEQ-2015.metadata.v3.unix.csv');
-    # mt_file='/ei/cb/common/Databases/scqc/Homo_sapiens.with.ERCC/GRCh38_and_ERCC92/MT_GRCh38_vector.rds'
-    mt_file='/Volumes/core-bioinformatics/common/Databases/scqc/Homo_sapiens.with.ERCC/GRCh38_and_ERCC92/MT_GRCh38_vector.rds'
-    plot_pct_TParva=F
-    is_test=F
-  }
-  # test for PBFX-1067_Claudia_Ribeiro_de_Almeida, meta1
-  if (F){
-    rundir='/ei/cb/analysis/CB-PPBFX-1067_Claudia_Ribeiro_de_Almeida_BI_CR_ENQ-5220_A_01_Smart-Seq2_QC/Analysis/scqc_reqs-0.2.2/run2'
-    tsv_location <- file.path(rundir,'quants_dir/est_countsR0881-P0004_matrix.tsv');
-    # tsv_location <- file.path(rundir,'quants_dir/all_plates.tsv');
-    pct_pseudo_txt <- file.path(rundir, 'qc_dir/percent_pseudoaligned.txt');
-    output_location <- file.path(rundir,'qc_dir');
-    sheet_file <- file.path(rundir,'SampleSheetPSEQ-2422_v3_SingleCellQC.2.unix.csv');
-    mt_file='/ei/cb/common/Databases/scqc/Mus_musculus/GRCm39/MT.Mus_musculus.GRCm39.rds'
-    plot_pct_TParva=F
-    is_test=F
-  }
-  # test for GENANNO-543_Stuart_Rushworth_UOE_SR_ENQ-5327, meta1
-  if (F){
-    rundir='/ei/cb/analysis/CB-GENANNO-543_Stuart_Rushworth_UOE_SR_ENQ-5327_A_01/Analysis/scqc_reqs-0.2.2/run2'
-    #tsv_location <- file.path(rundir,'quants_dir/est_countsR0881-P0004_matrix.tsv');
-    # tsv_location <- file.path(rundir,'quants_dir/all_plates.tsv');
-    pct_pseudo_txt <- file.path(rundir, 'qc_dir/percent_pseudoaligned.txt');
-    output_location <- file.path(rundir,'qc_dir');
-    sheet_file <- file.path(rundir,'META_DATA_CU_EW_v3.unix.csv');
-    mt_file='/ei/cb/common/Databases/scqc/Mus_musculus/GRCm39/MT.Mus_musculus.GRCm39.rds'
-    plot_pct_TParva=F
-    is_test=F
-  }
-  # test for png output on GENANNO-543_Stuart_Rushworth_UOE_SR_ENQ-5327, meta1
-  if (F){
-    rundir='/ei/cb/analysis/CB-GENANNO-543_Stuart_Rushworth_UOE_SR_ENQ-5327_A_01/Analysis/scqc_reqs-0.2.2/run1/'
-    tsv_location <- file.path(rundir,'quants_dir/est_countsLTHSCO1_matrix.tsv');
-    # tsv_location <- file.path(rundir,'quants_dir/all_plates.tsv');
-    pct_pseudo_txt <- file.path(rundir, 'qc_dir/percent_pseudoaligned.txt');
-    output_location <- file.path(rundir,'qc_dir');
-    sheet_file <- file.path(rundir,'META_DATA_CU_EW_v3.unix.csv');
-    mt_file='/ei/cb/common/Databases/scqc/Mus_musculus/GRCm39/MT.Mus_musculus.GRCm39.rds'
-    plot_pct_TParva=F
-    is_test=F
-  }
-  # test for Charlotte_Utting_MiSeq, meta1
-  if (F){
-    rundir='/ei/cb/development/lany/Charlotte_Utting_MiSeq/Analysis/scqc_reqs-0.2.2/run2'
-    tsv_location <- file.path(rundir,'quants_dir/est_countsP0001_matrix.tsv');
-    # tsv_location <- file.path(rundir,'quants_dir/all_plates.tsv');
-    pct_pseudo_txt <- file.path(rundir, 'qc_dir/percent_pseudoaligned.txt');
-    output_location <- file.path(rundir,'qc_dir');
-    sheet_file <- file.path(rundir,'SampleSheetUsed.v2.unix.csv');
-    mt_file='/ei/cb/common/Databases/scqc/Mus_musculus/GRCm39/MT.Mus_musculus.GRCm39.rds'
-    plot_pct_TParva=F
-    is_test=F
-  }
+
   # ===== 1. read expression matrix =====
   #tsv will be est_counts or tpm matrix transcript X sample
   #but counts still used as label in the SCE object
@@ -243,33 +78,46 @@ scqc_from_tsv <- function(tsv_location, pct_pseudo_txt, output_location="./",
     if (!samplesheet.check$Sample_Well) stop('SampleSheet ERROR: "Sample_Well" column missing/incomplete!')
     if (!samplesheet.check$Sample_Plate) stop('SampleSheet ERROR: "Sample_Plate" column missing/incomplete!')
     
-    # internally derive unique_sample_id_suffix. use it to link fastqs
     samplesheet$unique_sample_id_suffix <- paste0(samplesheet$Sample_Name,'_',samplesheet$Sample_ID)
-    row_ids <- sapply(samplesheet$unique_sample_id_suffix,
-           function(id) grepl(paste0(id, "_"), colnames(counts_df))) %>% apply(1,which)
-    # > samplesheet[row_ids[1:3],]
-    #     Lane Sample_ID             Sample_Name Sample_Plate Sample_Well i7_index_ID    Index
-    # 281    1 A06956_1 R0121-S0097_2V2aA01s481  R0121-P0002          A1          NA TAAGGCGA
-    # 282    1 A06957_1 R0121-S0098_2V2aB01s482  R0121-P0002          B1          NA TAAGGCGA
-    # 283    1 A06958_1 R0121-S0099_2V2aC01s483  R0121-P0002          C1          NA TAAGGCGA
-    #     i5_index_ID   Index2 Sample_Project            LibraryType TaxonID ScientificName
-    # 281          NA CTAGTCGA       PIP-2406 Illuminapremadelibrary    9606   Homo sapiens
-    # 282          NA AGCTAGAA       PIP-2406 Illuminapremadelibrary    9606   Homo sapiens
-    # 283          NA ACTCTAGG       PIP-2406 Illuminapremadelibrary    9606   Homo sapiens
-    #     DataQCPipeline UUID DataAccessGroup          unique_sample_id_suffix
-    # 281             NA   NA        Internal R0121-S0097_2V2aA01s481_A06956_1
-    # 282             NA   NA        Internal R0121-S0098_2V2aB01s482_A06957_1
-    # 283             NA   NA        Internal R0121-S0099_2V2aC01s483_A06958_1
-
-    # experiment_id <- samplesheet[row_ids,]$experiment %>% unique
-    colnames(counts_df) <- samplesheet[row_ids,]$unique_sample_id_suffix
-    # > counts_df[1:2,1:4]
-    #                            R0121-S0097_2V2aA01s481_A06956_1 R0121-S0098_2V2aB01s482_A06957_1
-    # transcript:ENST00000456328                                0                                0
-    # transcript:ENST00000450305                                0                                0
-    #                            R0121-S0099_2V2aC01s483_A06958_1 R0121-S0100_2V2aD01s484_A06959_1
-    # transcript:ENST00000456328                                0                                0
-    # transcript:ENST00000450305
+    # use this when colname of _matrix.tsv is fastqname
+    if (F) {
+      # internally derive unique_sample_id_suffix. use it to link fastqs
+      row_ids <- sapply(samplesheet$unique_sample_id_suffix,
+             function(id) grepl(paste0(id, "_"), colnames(counts_df))) %>% apply(1,which)
+  
+      # > samplesheet[row_ids[1:3],]
+      #     Lane Sample_ID             Sample_Name Sample_Plate Sample_Well i7_index_ID    Index
+      # 281    1 A06956_1 R0121-S0097_2V2aA01s481  R0121-P0002          A1          NA TAAGGCGA
+      # 282    1 A06957_1 R0121-S0098_2V2aB01s482  R0121-P0002          B1          NA TAAGGCGA
+      # 283    1 A06958_1 R0121-S0099_2V2aC01s483  R0121-P0002          C1          NA TAAGGCGA
+      #     i5_index_ID   Index2 Sample_Project            LibraryType TaxonID ScientificName
+      # 281          NA CTAGTCGA       PIP-2406 Illuminapremadelibrary    9606   Homo sapiens
+      # 282          NA AGCTAGAA       PIP-2406 Illuminapremadelibrary    9606   Homo sapiens
+      # 283          NA ACTCTAGG       PIP-2406 Illuminapremadelibrary    9606   Homo sapiens
+      #     DataQCPipeline UUID DataAccessGroup          unique_sample_id_suffix
+      # 281             NA   NA        Internal R0121-S0097_2V2aA01s481_A06956_1
+      # 282             NA   NA        Internal R0121-S0098_2V2aB01s482_A06957_1
+      # 283             NA   NA        Internal R0121-S0099_2V2aC01s483_A06958_1
+  
+      # experiment_id <- samplesheet[row_ids,]$experiment %>% unique
+      colnames(counts_df) <- samplesheet[row_ids,]$unique_sample_id_suffix
+      # > counts_df[1:2,1:4]
+      #                            R0121-S0097_2V2aA01s481_A06956_1 R0121-S0098_2V2aB01s482_A06957_1
+      # transcript:ENST00000456328                                0                                0
+      # transcript:ENST00000450305                                0                                0
+      #                            R0121-S0099_2V2aC01s483_A06958_1 R0121-S0100_2V2aD01s484_A06959_1
+      # transcript:ENST00000456328                                0                                0
+      # transcript:ENST00000450305
+    }
+    if (T){
+      row_ids <- sapply(samplesheet$Sample_ID,
+                        function(id) colnames(counts_df) %in% id) %>% apply(1,which)
+      colnames(counts_df) <- samplesheet[row_ids,]$unique_sample_id_suffix
+      
+      # check that colnames are in same order as the original df (ie.fastqnames are identical): Yes
+      # sapply(colnames(counts_df), function(id) strsplit(id,'_')%>%unlist%>%.[3]) %>% as.vector() == fastqname
+      
+    }
     plate_id <- as.character(unique(samplesheet[row_ids,"Sample_Plate"]))
   }
   
@@ -983,6 +831,7 @@ scqc_from_tsv <- function(tsv_location, pct_pseudo_txt, output_location="./",
   # condition 2: read mapping rate < 50%
   # read alignment rate file
   maprate_df <- read.table(pct_pseudo_txt, header = F, check.names = F)
+  # maprate_df <- read.table(basename(pct_pseudo_txt), header = F, check.names = F) #wu
   colnames(maprate_df) <- c('readname','map_rate')
   maprate_df <- maprate_df[-(maprate_df$readname=='mean'),]  
   # change readname eg: CU5DAY0_R0759-S0001_A64199_CU5DAY0A10_HTKKKDRXY_GGAGCTAC-AGAGGATA_L002 -> CU5DAY0A10
