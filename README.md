@@ -46,6 +46,16 @@ becomes
 ```
 CUB35DAY0_R0882-S0001_A68701_CUB35DAY0A10_H3VY5DRX2_CGTACTAG-AGAGGATA_L001_R1.fastq.gz
 ```
+3. make sample.csv
+```
+echo "sampleId,R1,R2" > sample.csv
+for sampleid in $(sed '1,1d' $samplesheet | cut -d',' -f2); do
+    R1=$(ls $symlinkdir/*_${sampleid}_*_R1.fastq.gz)
+    R2=$(ls $symlinkdir/*_${sampleid}_*_R2.fastq.gz)
+    echo $sampleid","$R1","$R2 >> $analysis_dir/samples.csv
+done
+
+```
 
 ## Running the pipeline
 
