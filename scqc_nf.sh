@@ -1,168 +1,250 @@
-// before running:'source scqc_reqs-0.1'
-// standard run case:'nextflow run some_path/scqc_nf.sh -c config_file &'
+// standard run case:'nextflow run scqc_nf.sh -c PIP-3144.config -with-dag flowchart.png -with-report -resume'
 
-//human_index='/ei/cb/common/Scripts/scqc/References/human_w_ercc.idx'
-//mouse_index='/ei/cb/common/Scripts/scqc/References/mm_ERCC.idx'
-//chicken_index='/ei/cb/common/Scripts/scqc/References/chicken_ERCC.idx'
-
-image_scater='/ei/cb/common/Scripts/scqc/Containers/R-3.5.2_scater.img'
-image_json='/ei/cb/common/Scripts/scqc/Containers/R-3.5.2_bioMjsonS3.img'
-image_doc='/ei/cb/common/Scripts/scqc/Containers/verse.simg'
-
-qc_script='/ei/cb/common/Scripts/scqc/Scripts/scqc_from_matrix.R'
-merge_script='/ei/cb/common/Scripts/scqc/Scripts/merge_kallisto_quant.R'
-k_scrape_script='/ei/cb/common/Scripts/scqc/Scripts/kallisto_mapping_scrape.R'
-doc_script='/ei/cb/common/Scripts/scqc/Scripts/QCreport.Rmd'
-plate_matrix_merge_script='/ei/cb/common/Scripts/scqc/Scripts/plate_merge.R'
-tx2g_script='/ei/cb/common/Scripts/scqc/Scripts/est_counts_tx2gene.R'
-
-k_scrape_metric='p_pseudoaligned'
-k_scrape_output='percent_pseudoaligned.txt'
-doc_rdata='qc_for_doc.Rdata'
-
-Channel
-	.fromFilePairs("${params.reads}/${params.pattern}.fastq.gz")
-	.set{read_pairs}
+nextflow.enable.dsl=2
 
 process quantification {
-
-    beforeScript 'source kallisto-0.45.1'
-    publishDir "$params.quantificationsoutdir"
-    tag "$sampleId"
-
-    input:
-    set sampleId, file(reads) from read_pairs
+	debug true
+	label "image_rscater"
+  publishDir "$params.quantificationsoutdir"
+  
 	
-    output:
-    file "${sampleId}" into quants
+	tag "$sampleId"
+  input:
+  	tuple val(sampleId), path(R1), path(R2)
 
-    """
-    kallisto quant -i ${params.idx} -o $sampleId -b 100 $reads
-    """
+  output:
+  	path "${sampleId}" , emit: quants
+
+  """
+  kallisto quant -t 1 -i ${params.idx} -o $sampleId -b 100 $R1 $R2
+  """
+	
+  /*
+	tag "${sample_id}"
+	input:
+		val sample_id 
+
+	output: 
+		path "${sample_id}", emit: quants
+
+	"""
+  kallisto quant -t 2 -i ${params.idx} -o $sample_id -b 100 $sample_id
+  """
+  */
 }
 
 process p_kal {
+	label "image_rscater"
 
+	// output percent_pseudoaligned.txt to qc_dir/ by copying
 	publishDir "$params.qcoutdir", mode: 'copy'
 	
 	input:
-	file flag_check from quants.collect()
+		// wait for all kallisto processes to finish 
+		path quants_check 
 
 	output:
-	file "${k_scrape_output}" into k_scrape_ch
+		path "percent_pseudoaligned.txt"
 
 	"""
-	singularity exec ${image_json} Rscript ${k_scrape_script} ${params.quantificationsoutdir} ${k_scrape_output} ${k_scrape_metric}
+	Rscript ${params.RScript_dir}kallisto_mapping_scrape.R ${params.quantificationsoutdir} percent_pseudoaligned.txt p_pseudoaligned
 	"""
 }
 
+
 process q_merge {
+	label "image_rscater"
 	tag "$plate_id"	
 	errorStrategy 'finish'
-	beforeScript 'source R-3.5.2'	
-	
+	publishDir "$params.qcoutdir/$plate_id", mode: 'copy'
+
 	input:
-	file flag_check from k_scrape_ch
-	val plate_id from params.plate_ids
+		// wait for p_kal to output percent_pseudoaligned.txt - will be ln to current process dir, although it is not used.
+		path p_kal
+		val plate_id 
 	
 	output:
-	file "tsv_name_${plate_id}" into count_file
+		path "est_counts${plate_id}_matrix.tsv" , emit: estcounts
+		val plate_id, emit: plate_id
 
+	// R script generate, e.g., $workdir/est_countsCU5DAY0_matrix.tsv
+	// and copy to qc_dir/$plate_id location
 	"""	
-	Rscript $merge_script ${params.quantificationsoutdir} est_counts ${plate_id};
-	echo \$(ls -d -1 ${params.quantificationsoutdir}*.* | grep ${plate_id}_matrix.tsv) > tsv_name_${plate_id};
+	workdir="\$(pwd)" && \
+	Rscript ${params.RScript_dir}merge_kallisto_quant.R ${params.quantificationsoutdir} est_counts ${plate_id} \${workdir};
 	"""
 }
 
 process qc {
+	label "image_rscater"
 	errorStrategy 'finish'
 	beforeScript 'export HDF5_DISABLE_VERSION_CHECK=1'
+	tag "$plate_id"
+	
+	// publishDir "$params.qcoutdir/$plate_id", mode: 'copy', pattern: "{*.tsv, *.pdf, *.Rdata}"
+	publishDir "$params.qcoutdir/$plate_id", mode: 'copy'
 
 	input:
-	file name_file from count_file
+		// e.g., quants_dir/est_countsCU5DAY0_matrix.tsv
+		path est_counts_file 
+		path pc_pseudoalign_file
+		val plate_id
 
 	output:
-	file name_file into qc_done
+		path "qc_${est_counts_file}.done", emit: complete_check
+		path "${plate_id}qc_for_doc.Rdata", emit: rdata
+		path "QC_meanexp_vs_freq${plate_id}.pdf", emit: figpdf
+		path "*.pdf"
+		path "*.tsv"
 
 	""" 
-	singularity exec ${image_scater} Rscript ${qc_script} \$(cat ${name_file}) ${params.qcoutdir} ${params.plate_info} ${params.samplesheet} ${params.mtnamefile}
+	workdir="\$(pwd)" && cd \${workdir} && \
+	Rscript ${params.RScript_dir}scqc_from_matrix.meta.R ${est_counts_file} ${pc_pseudoalign_file} \${workdir} ${params.samplesheet} ${params.mtnamefile} && \
+	touch qc_${est_counts_file}.done
 	"""
 }
 
-process doc {
-	publishDir "$params.qcoutdir", mode: 'copy'
+process gs {
+	errorStrategy 'finish'
+	publishDir "$params.qcoutdir/$plate_id", mode: 'copy'
+	label "image_rscater" 
+	tag "$plate_id"
 
 	input:
-	file flag2_check from qc_done.collect()
-	val plate_id from params.plate_ids
-	
+		val plate_id
+		path figpdf
+
+	output:
+		path "rename_QC_meanexp_vs_freq${plate_id}.png"
+
+	"""	
+	gs -dNOPAUSE -dQUIET -dBATCH -sDEVICE=png16m -sOutputFile=rename_QC_meanexp_vs_freq${plate_id}.png -r256 \
+    ${figpdf}
+  """
+}
+
+process doc {
+	label "image_rknit"
+	tag "$plate_id"
+	//maxForks 1
+
+	publishDir "$params.qcoutdir/$plate_id", mode: 'copy'
+	//cache false
+
+	input:
+		path qc_rdata
+		path qc_complete_check
+		path gs_png_file 
+		val plate_id 
+		path percent_pseudoaligned
 	
 	output:
-	file "Finished_${plate_id}.txt" into finished_ch
+		path "Finished_${plate_id}.txt", emit: complete_check
+		path "${plate_id}_QC_report.pdf", emit: pdf
 
 	"""
-	singularity exec ${image_doc} Rscript -e \"options(warn=-1);objects<-\'${params.qcoutdir}${plate_id}${doc_rdata}\';mapping_file <- read.table(\'${params.qcoutdir}${k_scrape_output}\');rmarkdown::render(\'${doc_script}\', 'pdf_document', output_file=\'${plate_id}_QC_report.pdf\', output_dir=\'${params.qcoutdir}${plate_id}\')\";
-	echo '${plate_id}' > Finished_${plate_id}.txt
+	workdir="\$(pwd)" && cd \${workdir} && echo \${workdir} && deref_rdata="\$(readlink ${qc_rdata})" && deref_png="\$(readlink ${gs_png_file})" && \
+	Rscript -e \"options(warn=-1);objects<-\'\${deref_rdata}\';pngfile<-\'\${deref_png}\';mapping_file <- read.table(\'${percent_pseudoaligned}\');rmarkdown::render(\'${params.RScript_dir}QCreport.Rmd\', 'pdf_document', output_file=\'${plate_id}_QC_report.pdf\', output_dir=\'\${workdir}\')\" && \
+	touch Finished_${plate_id}.txt
 	"""
 }
 
 process mat_merge {
-	publishDir "$params.quantificationsoutdir", mode: 'copy'
+	// merge all plates est_counts${plate_id}_matrix.tsv into one
+	publishDir "$params.qcoutdir/all", mode: 'copy'
+  //cache false
+  label "image_rscater"
 
 	input:
-	val id_list from finished_ch.collect()
-
+		val est_counts_file_list 
+ 
 	output:
-	file 'matrix_location.txt' into fortx2g_ch
+		path 'est_countsall_plates.tsv'
 	
+	
+	// singularity exec R_verse.v5.img Rscript plate_merge.R quants_dir/ \
+	//	'Finished_CU5DAY0.txt Finished_CU7DAY0.txt Finished_CU5DAY7.txt Finished_CU7DAY7.txt';
 	"""
-	singularity exec ${image_scater} Rscript ${plate_matrix_merge_script} ${params.quantificationsoutdir} \'${id_list}\';
-	echo \$(ls -d -1 ${params.quantificationsoutdir}*.* | grep all) > matrix_location.txt
+	workdir="\$(pwd)" && cd \${workdir} && \
+	Rscript ${params.RScript_dir}plate_merge.R \${workdir} est_counts \'${est_counts_file_list}\' nextflow;
 	"""
-
 }
 
 process tx2g {
-	publishDir "$params.quantificationsoutdir", mode: 'copy'
-
+	publishDir "$params.qcoutdir/all", mode: 'copy'
+	label "image_rscater"
 	input:
-	file tx_matrix_location from fortx2g_ch
+		path all_plates_tsv 
 
 	output:
-	file tx_matrix_location into forAllQC_ch
+		// path 'tx2g_finished.txt'
+		path 'plates_as_genelevel.tsv'
 
 	"""
-	singularity exec ${image_json} Rscript ${tx2g_script} \$(cat ${tx_matrix_location}) ${params.quantificationsoutdir} ${params.species}
+	workdir="\$(pwd)" && cd \${workdir} && \
+	Rscript ${params.RScript_dir}est_counts_tx2gene.R ${all_plates_tsv} \${workdir}/plates_as_genelevel.tsv ${params.species} ${params.trans2gen_tsv} 
 	"""
 
 }
 
-process all_qc {
-	beforeScript 'export HDF5_DISABLE_VERSION_CHECK=1'
-
-	input:
-	file name_file from forAllQC_ch
-
-	output:
-	file 'qfolder_name' into all_folder_name
-
-	""" 
-	singularity exec ${image_scater} Rscript ${qc_script} \$(cat ${name_file}) ${params.qcoutdir} ${params.plate_info} ${params.samplesheet} ${params.mtnamefile};
-	echo ${params.quantificationsoutdir} > qfolder_name;
-	"""
+workflow QC_AND_DOC {
+	take: 
+		est_counts_file 
+		pc_pseudoalign_file
+		plate_ids
+	main:
+		qc( est_counts_file, pc_pseudoalign_file, plate_ids )
+	  gs( plate_ids, qc.out.figpdf )
+	  doc( qc.out.rdata, qc.out.complete_check, gs.out, plate_ids, pc_pseudoalign_file )
+	emit: 
+		doc.out.complete_check
 }
 
-process all_doc {
-	publishDir "$params.qcoutdir", mode: 'copy'
+workflow QC_AND_DOC_plate_all {
+	take: 
+		est_counts_file 
+		pc_pseudoalign_file
+	main:
+		def plate_ids = Channel.fromList( ['all'] )
+		qc( est_counts_file, pc_pseudoalign_file, plate_ids )
+		gs( plate_ids, qc.out.figpdf )
+	  doc( qc.out.rdata, qc.out.complete_check, gs.out, plate_ids, pc_pseudoalign_file )
+	emit: 
+		doc.out.complete_check
+}
 
-	input:
-	file qfold_name from all_folder_name	
+workflow {
+  def sample_ids = Channel.fromPath(params.samplesheet) | splitCsv(header:true) | map { row-> row.Sample_ID}
+  
+  def plate_ids = Channel.fromList(params.plate_ids)
+
+	Channel
+		.fromPath(params.samplecsv)
+		.splitCsv(header:true)
+		.map { row -> tuple(row.sampleId, file(row.R1), file(row.R2)) }
+		.set {sample_ids_ch}
+
+	quantification(sample_ids_ch)
+  
+  p_kal( quantification.out.quants.collect() )
 	
-	output:
-	file "Finished_all.txt" into all_finished_ch
+  q_merge(p_kal.out, plate_ids )
 
-	"""
-	singularity exec ${image_doc} Rscript -e \"options(warn=-1);objects<-\'${params.qcoutdir}all${doc_rdata}\';mapping_file <- read.table(\'${params.qcoutdir}${k_scrape_output}\');rmarkdown::render(\'${doc_script}\', 'pdf_document', output_file=\'all_QC_report.pdf\', output_dir=\'${params.qcoutdir}all\')\";
-	echo 'All' > Finished_all.txt
-	"""
+	QC_AND_DOC(q_merge.out.estcounts, p_kal.out, q_merge.out.plate_id)
+	
+  mat_merge( q_merge.out.estcounts.collect() )
+  
+  tx2g( mat_merge.out )
+	
+	if(params.plate_ids.size() > 1) {
+		QC_AND_DOC_plate_all(mat_merge.out, p_kal.out)
+	}
+
+	
 }
+
+
+
+
+
+
